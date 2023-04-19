@@ -1,6 +1,8 @@
 import { Component } from "react";
 import styled from "styled-components";
 
+import Transaction from "../Transaction";
+
 const Avatar = styled.img`
     border-radius: 100%;
     width: 64px;
@@ -20,10 +22,13 @@ const UserItem = styled.li`
   font-size: 14px;
   gap:24px;
   justify-content: space-between;
-  margin: 0 auto;
-  max-width: 720px;
+  max-width: 768px;
+  min-width: 360px;
   padding: 16px 24px;
   width: 100%;
+  @media screen and (max-width:480px) {
+    padding: 16px 8px;
+  }
 `
 
 class User extends Component {
@@ -38,9 +43,7 @@ class User extends Component {
           <p>{user.name}</p>
           <p>ID: {user.id} - Username: {user.username}</p>
         </UserInformation>
-        <div>
-          <button>Pagar</button>
-        </div>
+        <Transaction id={user.id} user={user}>Pagar</Transaction>
       </UserItem>
     )
   }

@@ -9,7 +9,6 @@ const UserList = styled.ul`
   box-sizing: border-box;
   max-width: 768px;
   min-width: 360px;
-  padding: 2px;
   width: 100%;
 `
 

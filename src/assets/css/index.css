@@ -1,0 +1,10 @@
+:root {}
+
+#root {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: start;
+  min-height: 100vh;
+  min-width: 100vw;
+}

@@ -1,48 +1,35 @@
 import { Component } from "react";
-import styled from "styled-components"
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup'
 
-const Modal = styled.div`
-    align-items: center;
-    backdrop-filter: blur(2px);
-    background-color:#00000050;
-    box-sizing: border-box;
-    color: #000;
-    display: ${(props) => props.show ? `fixed` : `none`};
-    height: 100%;
-    justify-content: center;
-    left: 0;
-    position: fixed;
-    top: 0;
-    width: 100%;
-`
+import { ButtonGroup, FinalMessage, FormMessageError, Header,
+  InputGroup, Modal, ModalContent, Strong, StyledForm, UserName
+} from "./Styleds"
+import Connection from "../Connection";
 
-const ModalContent = styled.div`
-  background-color: #fff;
-  max-width: 720px;
-  min-width: 360px;
-  width: 90%;
-`
-
-const Header = styled.div`
-  background-color: #474a6e;
-  color: #fff;
-  padding: 8px;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`
-
-const UserName = styled.span`
-  color: #c5ce40;
-  font-weight: bold;
-`
 
 class Transaction extends Component {
 
   state = {
-    showModal: false
+    showModal: false,
+    transactionStatus: "clear"
   }
+
+  cards = [
+    // valid card
+    {
+      card_number: '1111111111111111',
+      cvv: 789,
+      expiry_date: '01/18',
+    },
+    // invalid card
+    {
+      card_number: '4111111111111234',
+      cvv: 123,
+      expiry_date: '01/20',
+    },
+  ];
+
 
   constructor(props) {
     super(props)
@@ -66,9 +53,127 @@ class Transaction extends Component {
     }
   }
 
+  closeModal = () => {
+    this.setState({ transactionStatus: "clear" })
+    this.handleModal()
+  }
+
+  handleSubmit = async (values) => {
+
+    const card = this.cards[values.card]
+
+    try {
+      // Checking card to simulate failure: 1=>fail, n=>pass
+      if (values.card == 1) {
+        this.setState({ transactionStatus: "fail" })
+      } else {
+        const payload = {
+          card_number: card.card_number,
+          cvv: card.cvv,
+          expiry_date: card.expiry_date,
+          destination_user_id: values.user,
+          value: Number(values.value),
+        }
+        const conn = new Connection()
+        const data = await conn.doTransaction(payload)
+        if (data.success === true) {
+          this.setState({ transactionStatus: "success" })
+        } else {
+          this.setState({ transactionStatus: "fail" })
+        }
+      }
+
+      console.log(this.state.transactionStatus)
+
+    } catch (error) {
+      console.log("handleSubmit", error)
+    }
+  }
+
   render() {
 
     const user = this.props.user
+    const cards = this.cards.map((card, index) => (<option key={index} value={index}> Cartão com final {card.card_number.slice(-4)}</option>))
+    const initialValues = {
+      'user': this.props.user.id,
+      'value': '',
+      'card': ''
+    }
+    const validationSchema = Yup.object({
+      'user': Yup.number().required(),
+      'value': Yup.number().min(0.01, "Informe pelo menos um centavo").required("Informe um valor"),
+      'card': Yup.number().required("Escolha um cartão"),
+    })
+
+    const renderFormError = (m) => { return (<FormMessageError>{m}</FormMessageError>) } // TODO: StyledError
+
+    const renderByStatus = () => {
+
+      if (this.state.transactionStatus === "success") {
+        return (
+          <>
+            <Header>
+              <h3>Recibo de pagamento</h3>
+            </Header>
+            <FinalMessage>O pagamento foi concluído com sucesso!</FinalMessage>
+            <ButtonGroup>
+              <button type="button" onClick={this.closeModal} >Sair</button>
+            </ButtonGroup>
+          </>
+        )
+      } else if (this.state.transactionStatus === "fail") {
+        return (
+          <>
+            <Header>
+              <h3>Recibo de pagamento</h3>
+            </Header>
+            <FinalMessage>O pagamento <Strong>não</Strong> foi concluído com sucesso!</FinalMessage>
+            <ButtonGroup>
+              <button type="button" onClick={this.closeModal} >Sair</button>
+            </ButtonGroup>
+
+          </>
+        )
+      }
+
+      return (
+        <>
+          <Header>
+            <h3>Pagamento para <UserName>{user.name}</UserName></h3>
+          </Header>
+
+          <Formik
+            initialValues={initialValues}
+            validationSchema={validationSchema}
+            onSubmit={this.handleSubmit}
+          >
+
+            <Form>
+              <StyledForm>
+                <Field name="user" type="hidden" />
+                <InputGroup>
+                  <Field name="value" type="text" placeholder="R$ 0,00" />
+                  <ErrorMessage name="value" render={renderFormError} />
+                </InputGroup>
+
+                <InputGroup>
+                  <Field name="card" as="select" >
+                    <option></option>
+                    {cards}
+                  </Field>
+                  <ErrorMessage name="card" render={renderFormError} />
+                </InputGroup>
+                <ButtonGroup>
+                  <button type="button" onClick={this.closeModal} >Cancelar</button>
+                  <button type="submit">Pagar</button>
+                </ButtonGroup>
+              </StyledForm>
+            </Form>
+
+          </Formik>
+        </>
+      )
+    }
 
     return (
       <>
@@ -77,11 +182,9 @@ class Transaction extends Component {
         </div>
         <Modal show={this.state.showModal}>
           <ModalContent>
-            <Header>
-              <h3>Pagamento para <UserName>{user.name}</UserName></h3>
-              <button onClick={this.handleModal}>x</button>
-            </Header>
-            <form>form</form>
+
+            {renderByStatus()}
+
           </ModalContent>
         </Modal>
       </>
